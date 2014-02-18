@@ -104,6 +104,8 @@ def newapkfile(apkname):
 
 def autoApk():
     global success
+
+    print '开始破解第：%s 个'%success
     code = 'a4-s'
     codenum = 1010
 
@@ -115,6 +117,7 @@ def autoApk():
         shutil.rmtree(newapkfiles)
     os.mkdir(newapkfiles)
     for apkdir in os.listdir(apkfiles):
+
         #if '.DS_Store' == apkdir:
         #    continue
         try:
@@ -125,14 +128,14 @@ def autoApk():
             if dirname[-4:] == '.apk':
                 apkdirlist.remove(dirname)
                 apkdirlist.insert(0, dirname)
-        if apkdirlist[0][-4:] != '.apk':
+        if not apkdirlist or apkdirlist[0][-4:] != '.apk':
             continue
         appname = ''
         for dirname in apkdirlist:
             if dirname[-4:] != '.apk':
                 shutil.copyfile(apkfile(apkdir, dirname), '%s/%s' % (newapkfile(appname), dirname))
                 continue
-
+            success+=1
             apklist.append(dirname)
             print dirname
             cmdExtract = r'java -jar lib/apktool.jar  d -f -s %s %s' % (apkfile(apkdir, dirname), cacheapkfile(dirname))
@@ -214,9 +217,15 @@ def autoApk():
 
             print mainclass
             codenum += 1
+            if not os.path.exists('%s/assets' % cacheapkfile(dirname)):
+                os.mkdir('%s/assets' % cacheapkfile(dirname))
             pluginfile = file('%s/assets/plugin.xml' % cacheapkfile(dirname), 'w')
             pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (code, codenum))).encode('utf-8'))
             pluginfile.close()
+
+            codenumfile = file('%s/codenum.txt'%(newapkfile(appname),),'w')
+            codenumfile.write('%s'%codenum)
+            codenumfile.close()
 
             f = file('%s/AndroidManifest.xml' % cacheapkfile(dirname), 'w')
             import codecs
@@ -251,7 +260,7 @@ def autoApk():
                 linelist.append(line)
             if os.path.exists(signApk):
                 shutil.copyfile(signApk, signApk.replace(cachefiles, '%s/%s' % (newapkfiles, appname)))
-                success += 1
+                print '完成破解第：%s 个'%success
             else:
                 shutil.rmtree(newapkfile(appname))
                 for line in linelist:
@@ -326,21 +335,22 @@ class ApkPage(HTMLParser.HTMLParser):
             #    sys.stdout.write(' >> %s/n' % data[:40].strip())
 
 class DownloadApkAndImage(threading.Thread):
-    def __init__(self,q):
+    def __init__(self, q, count):
         threading.Thread.__init__(self)
         self.q=q
+        self.count = count
     def run(self):
         global num
         url=None
         while True:
             queueLock = threading.Lock()
+            queueLock.acquire()
             if self.q.empty():
-                queueLock.acquire()
+                queueLock.release()
                 break
             else:
-                num += 1
                 url = self.q.get()
-                print '第%s 个开始'%(num)
+            queueLock.release()
             html = urllib2.urlopen('%s%s' % (urlbase, url)).read()
             scriptend = html.find('</script>')
             apkstart = html[:scriptend].find("'downurl':")
@@ -374,6 +384,11 @@ class DownloadApkAndImage(threading.Thread):
                 with open("%s/%s/%s.%s" % (apkfiles, dirname, i, filename), "wb") as code:
                     code.write(data)
 
+            num+=1
+            print '完成第 %s 个'%num
+            print '还剩 %s 个'%self.q.qsize()
+            print '一共 %s 个'%self.count
+
 
 def downloadApk():
 
@@ -386,7 +401,7 @@ def downloadApk():
     http://zhushou.360.cn/list/index/cid/2?page=5
     '''
     apkurllist = []
-    for url in urlstr.split()[:1]:
+    for url in urlstr.split()[:3]:
 
         html = urllib2.urlopen(url).read()
         s = ShowStructure()
@@ -400,7 +415,7 @@ def downloadApk():
     queueLock.release()
     threads=[]
     for i in range(10):
-        thread=DownloadApkAndImage(workQueue)
+        thread=DownloadApkAndImage(workQueue,len(apkurllist))
         thread.start()
         threads.append(thread)
     for t in threads:
@@ -412,13 +427,13 @@ newapkfiles = 'newapkfiles'
 cachefiles = 'cachefiles'
 password = raw_input('输入签名密码:\n')
 
-num = 49
+num = 0
 success = 0
 
 
 
 print '开始下载'
-# downloadApk()
+#downloadApk()
 print '下载完成，下载 ：%s'%num
 print '开始破解'
 autoApk()
