@@ -107,7 +107,7 @@ def autoApk():
 
     print '开始破解第：%s 个'%success
     code = 'a4-s'
-    codenum = 1010
+    codenum = 1000
 
     apklist = []
     if os.path.exists(cachefiles):
@@ -171,13 +171,25 @@ def autoApk():
 
             for s in stringxml.getElementsByTagName('string'):
                 if s.getAttribute('name') == appnameres:
-                    appname = s.childNodes[0].nodeValue
+                    appname = s.childNodes[0].nodeValue.replace('/','')
                     print appname
+            if appname and appname[0]=='@':
+                appnameres=appname.replace('@string/', '')
+                for s in stringxml.getElementsByTagName('string'):
+                    if s.getAttribute('name') == appnameres:
+                        appname = s.childNodes[0].nodeValue.replace('/','')
+                        print appname
             if not appname:
                 break
             if os.path.exists(newapkfile(appname)):
                 shutil.rmtree(newapkfile(appname))
             os.mkdir(newapkfile(appname))
+
+            with open("%s/versioncode.txt" % (newapkfile(appname), ), "w") as code:
+                code.write(node.getAttribute('android:versionCode'))
+            with open("%s/versionnum.txt" % (newapkfile(appname), ), "w") as code:
+                code.write(node.getAttribute('android:versionName'))
+
 
             iconres = application.getAttribute('android:icon').replace('@drawable/', '')
             iconsrc0 = '%s/res/drawable/%s.png' % (cacheapkfile(dirname), iconres)
@@ -311,6 +323,7 @@ class ApkPage(HTMLParser.HTMLParser):
             for att, val in attrs:
                 if att == 'class' and val == 'breif':
                     self.info = True
+                    self.infodict['apkinfo']=''
                 if att == 'class' and val == 'overview':
                     self.img = True
         if self.img and tag == 'img':
@@ -328,7 +341,8 @@ class ApkPage(HTMLParser.HTMLParser):
 
     def handle_data(self, data):
         if self.info:
-            self.infodict['apkinfo'] = data
+            self.infodict['apkinfo'] += data
+            self.infodict['apkinfo'] += '\n'
             #if data.strip():
             #    for tag in self.alist:
             #        sys.stdout.write('/'+tag)
@@ -361,10 +375,10 @@ class DownloadApkAndImage(threading.Thread):
 
             dirname = url.split('/')[-1]
             filename = apkurl.split('/')[-1]
-            if os.path.exists('%s/%s'%(apkfiles,dirname)):
-                shutil.rmtree('%s/%s'%(apkfiles,dirname))
-            os.mkdir('%s/%s'%(apkfiles,dirname))
-            urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
+            #if os.path.exists('%s/%s'%(apkfiles,dirname)):
+            #    shutil.rmtree('%s/%s'%(apkfiles,dirname))
+            #os.mkdir('%s/%s'%(apkfiles,dirname))
+            #urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
 
             linelist = []
             for line in html.split('\r\n'):
@@ -374,6 +388,7 @@ class DownloadApkAndImage(threading.Thread):
             apkinfo.feed(''.join(linelist))
             with open("%s/%s/desc.txt" % (apkfiles, dirname), "w") as code:
                 code.write(apkinfo.infodict['apkinfo'].encode('utf-8').replace('\n', ''))
+
             with open("%s/%s/address.txt" % (apkfiles, dirname), "w") as code:
                 code.write(url)
             for i, imgurl in enumerate(apkinfo.infodict['imglist']):
@@ -399,14 +414,94 @@ def downloadApk():
     http://zhushou.360.cn/list/index/cid/2?page=3
     http://zhushou.360.cn/list/index/cid/2?page=4
     http://zhushou.360.cn/list/index/cid/2?page=5
+    http://zhushou.360.cn/list/index/cid/2?page=6
+    http://zhushou.360.cn/list/index/cid/2?page=7
+    http://zhushou.360.cn/list/index/cid/2?page=8
     '''
     apkurllist = []
-    for url in urlstr.split()[:3]:
-
-        html = urllib2.urlopen(url).read()
-        s = ShowStructure()
-        s.setlist(apkurllist)
-        s.feed(html)
+    #for url in urlstr.split()[3:7]:
+    #
+    #    html = urllib2.urlopen(url).read()
+    #    s = ShowStructure()
+    #    s.setlist(apkurllist)
+    #    s.feed(html)
+    apkurl = '''
+    /detail/index/soft_id/227778
+    /detail/index/soft_id/1198733
+    /detail/index/soft_id/1515940
+    /detail/index/soft_id/220882
+    /detail/index/soft_id/329530
+    /detail/index/soft_id/698912
+    /detail/index/soft_id/707073
+    /detail/index/soft_id/757416
+    /detail/index/soft_id/84335
+    /detail/index/soft_id/1515941
+    /detail/index/soft_id/431202
+    /detail/index/soft_id/710434
+    /detail/index/soft_id/111486
+    /detail/index/soft_id/92626
+    /detail/index/soft_id/12251
+    /detail/index/soft_id/1248899
+    /detail/index/soft_id/183022
+    /detail/index/soft_id/189130
+    /detail/index/soft_id/256584
+    /detail/index/soft_id/134876
+    /detail/index/soft_id/1515272
+    /detail/index/soft_id/179889
+    /detail/index/soft_id/194828
+    /detail/index/soft_id/4233
+    /detail/index/soft_id/1065179
+    /detail/index/soft_id/7444
+    /detail/index/soft_id/787218
+    /detail/index/soft_id/295800
+    /detail/index/soft_id/5433
+    /detail/index/soft_id/9628
+    /detail/index/soft_id/3297
+    /detail/index/soft_id/705066
+    /detail/index/soft_id/8030
+    /detail/index/soft_id/89646
+    /detail/index/soft_id/186908
+    /detail/index/soft_id/120791
+    /detail/index/soft_id/298516
+    /detail/index/soft_id/3535
+    /detail/index/soft_id/807825
+    /detail/index/soft_id/210594
+    /detail/index/soft_id/225990
+    /detail/index/soft_id/231754
+    /detail/index/soft_id/260770
+    /detail/index/soft_id/41587
+    /detail/index/soft_id/154064
+    /detail/index/soft_id/175797
+    /detail/index/soft_id/573348
+    /detail/index/soft_id/907561
+    /detail/index/soft_id/205278
+    /detail/index/soft_id/5478
+    /detail/index/soft_id/6359
+    /detail/index/soft_id/89403
+    /detail/index/soft_id/150217
+    /detail/index/soft_id/170092
+    /detail/index/soft_id/185186
+    /detail/index/soft_id/227964
+    /detail/index/soft_id/252172
+    /detail/index/soft_id/4499
+    /detail/index/soft_id/189634
+    /detail/index/soft_id/850312
+    /detail/index/soft_id/95918
+    /detail/index/soft_id/696980
+    /detail/index/soft_id/9475
+    /detail/index/soft_id/347206
+    /detail/index/soft_id/6393
+    /detail/index/soft_id/711981
+    /detail/index/soft_id/740700
+    /detail/index/soft_id/7572
+    /detail/index/soft_id/31585
+    /detail/index/soft_id/178770
+    /detail/index/soft_id/701182
+    /detail/index/soft_id/705647
+    /detail/index/soft_id/174716
+    /detail/index/soft_id/8734
+    '''
+    apkurllist = apkurl.split()
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
@@ -414,7 +509,7 @@ def downloadApk():
         workQueue.put(url)
     queueLock.release()
     threads=[]
-    for i in range(10):
+    for i in range(1):
         thread=DownloadApkAndImage(workQueue,len(apkurllist))
         thread.start()
         threads.append(thread)
@@ -433,7 +528,7 @@ success = 0
 
 
 print '开始下载'
-#downloadApk()
+downloadApk()
 print '下载完成，下载 ：%s'%num
 print '开始破解'
 autoApk()
