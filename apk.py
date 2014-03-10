@@ -107,7 +107,7 @@ def autoApk():
 
     print '开始破解第：%s 个'%success
     code = 'a4-s'
-    codenum = 1000
+    codenum = 1100
 
     apklist = []
     if os.path.exists(cachefiles):
@@ -133,6 +133,18 @@ def autoApk():
         appname = ''
         for dirname in apkdirlist:
             if dirname[-4:] != '.apk':
+                if dirname[-4:].lower() in ['.png','.jpg']:
+                    from PIL import Image
+                    img = Image.open(apkfile(apkdir, dirname))
+                    if dirname[-4:].lower() == '.png':
+                        img = img.resize((48, 48), Image.ANTIALIAS)
+                    else:
+                        width = img.size[0]
+                        height = img.size[1]
+                        nw=width/(height/400.0)
+                        img = img.resize((int(nw),400),Image.ANTIALIAS)
+                    img.save('%s/%s' % (newapkfile(appname), dirname))
+                    continue
                 shutil.copyfile(apkfile(apkdir, dirname), '%s/%s' % (newapkfile(appname), dirname))
                 continue
             success+=1
@@ -198,14 +210,24 @@ def autoApk():
             iconsrc1 = '%s/res/drawable-hdpi/%s.png' % (cacheapkfile(dirname), iconres)
             iconsrc2 = '%s/res/drawable-xhdpi/%s.png' % (cacheapkfile(dirname), iconres)
             iconsrc3 = '%s/res/drawable-xxhdpi/%s.png' % (cacheapkfile(dirname), iconres)
+            from PIL import Image
             if os.path.exists(iconsrc0):
-                shutil.copyfile(iconsrc0, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc0, '%s/%s.png' % (newapkfile(appname), iconres))
+                img = Image.open(iconsrc0)
             elif os.path.exists(iconsrc1):
-                shutil.copyfile(iconsrc1, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc1, '%s/%s.png' % (newapkfile(appname), iconres))
+                img = Image.open(iconsrc1)
             elif os.path.exists(iconsrc2):
-                shutil.copyfile(iconsrc2, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc2, '%s/%s.png' % (newapkfile(appname), iconres))
+                img = Image.open(iconsrc2)
             elif os.path.exists(iconsrc3):
-                shutil.copyfile(iconsrc3, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc3, '%s/%s.png' % (newapkfile(appname), iconres))
+                img = Image.open(iconsrc3)
+
+
+            img = img.resize((48, 48), Image.ANTIALIAS)
+
+            img.save('%s/%s.png' % (newapkfile(appname), iconres))
 
             usersdk = androidManifest.getElementsByTagName('uses-sdk')
             if len(usersdk):
@@ -503,7 +525,7 @@ def downloadApk():
     /detail/index/soft_id/174716
     /detail/index/soft_id/8734
     '''
-    apkurllist = apkurl.split()[:3]
+    apkurllist = apkurl.split()
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
