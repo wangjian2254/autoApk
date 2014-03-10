@@ -185,9 +185,11 @@ def autoApk():
                 shutil.rmtree(newapkfile(appname))
             os.mkdir(newapkfile(appname))
 
-            with open("%s/versioncode.txt" % (newapkfile(appname), ), "w") as code:
-                code.write(node.getAttribute('android:versionCode'))
             with open("%s/versionnum.txt" % (newapkfile(appname), ), "w") as code:
+                code.write(node.getAttribute('android:versionCode'))
+            with open("%s/package.txt" % (newapkfile(appname), ), "w") as code:
+                code.write(package)
+            with open("%s/versioncode.txt" % (newapkfile(appname), ), "w") as code:
                 code.write(node.getAttribute('android:versionName'))
 
 
@@ -375,10 +377,10 @@ class DownloadApkAndImage(threading.Thread):
 
             dirname = url.split('/')[-1]
             filename = apkurl.split('/')[-1]
-            #if os.path.exists('%s/%s'%(apkfiles,dirname)):
-            #    shutil.rmtree('%s/%s'%(apkfiles,dirname))
-            #os.mkdir('%s/%s'%(apkfiles,dirname))
-            #urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
+            if os.path.exists('%s/%s'%(apkfiles,dirname)):
+               shutil.rmtree('%s/%s'%(apkfiles,dirname))
+            os.mkdir('%s/%s'%(apkfiles,dirname))
+            urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
 
             linelist = []
             for line in html.split('\r\n'):
@@ -501,7 +503,7 @@ def downloadApk():
     /detail/index/soft_id/174716
     /detail/index/soft_id/8734
     '''
-    apkurllist = apkurl.split()
+    apkurllist = apkurl.split()[:3]
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
@@ -509,7 +511,7 @@ def downloadApk():
         workQueue.put(url)
     queueLock.release()
     threads=[]
-    for i in range(1):
+    for i in range(2):
         thread=DownloadApkAndImage(workQueue,len(apkurllist))
         thread.start()
         threads.append(thread)
@@ -528,13 +530,14 @@ success = 0
 
 
 print '开始下载'
-downloadApk()
+# downloadApk()
 print '下载完成，下载 ：%s'%num
 print '开始破解'
 autoApk()
 print '破解完成'
 print '下载：%s 个，成功破解：%s 个'%(num,success)
-
+from autoUpload import uploadApks
+uploadApks()
 #
 #apkName = 'ApkTest.apk'
 #easyName = apkName.split('.apk')[0]
