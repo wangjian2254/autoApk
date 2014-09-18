@@ -106,7 +106,7 @@ def autoApk():
     global success
 
     print '开始破解第：%s 个'%success
-    code = 'a4-s'
+    codestr = 'a4-s'
     codenum = 1100
 
     apklist = []
@@ -256,7 +256,7 @@ def autoApk():
             if not os.path.exists('%s/assets' % cacheapkfile(dirname)):
                 os.mkdir('%s/assets' % cacheapkfile(dirname))
             pluginfile = file('%s/assets/plugin.xml' % cacheapkfile(dirname), 'w')
-            pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (code, codenum))).encode('utf-8'))
+            pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (codestr, codenum))).encode('utf-8'))
             pluginfile.close()
 
             codenumfile = file('%s/codenum.txt'%(newapkfile(appname),),'w')
@@ -302,6 +302,7 @@ def autoApk():
                 for line in linelist:
                     print line
                 break
+        break
 
     if os.path.exists(cachefiles):
         shutil.rmtree(cachefiles)

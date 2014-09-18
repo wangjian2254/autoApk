@@ -12,7 +12,8 @@ user_agent = "image uploader"
 default_message = "Image $current of $total"
 
 uploadurl = 'http://mogu-mmggoo.appsp0t.com/PluginUploadScript'
-uploadurl2 = 'http://mogu-mmggoo.appsp0t.com/PluginUploadApkScript'
+# uploadurl = 'http://mogu-mmggoo.appsp0t.com/PluginUploadScript'
+# uploadurl2 = 'http://mogu-mmggoo.appsp0t.com/PluginUploadApkScript'
 
 import logging
 import os
@@ -93,7 +94,7 @@ def encode_multipart_data(data, files):
     def encode_file(field_name):
         filename = files[field_name]
         return ('--' + boundary,
-                'Content-Disposition: form-data; name="%s"; filename="%s"' % (field_name, filename.split('/')[-1]),
+                'Content-Disposition: form-data; name="file"; filename="%s"' % (field_name, filename.split('/')[-1]),
                 'Content-Type: %s' % get_content_type(filename),
                 '', open(filename, 'rb').read())
 
@@ -107,7 +108,7 @@ def encode_multipart_data(data, files):
 
     headers = {'content-type': 'multipart/form-data; boundary=' + boundary,
                'Host':'mogu-mmggoo.appsp0t.com',
-               'Referer':'http://mogu-mmggoo.appsp0t.com/PluginUploadApkScript',
+               'Referer':'http://mogu-mmggoo.appsp0t.com/',
                'DNT':'1',
                'Connection':'keep-alive',
                'Accept-Encoding':' deflate',
@@ -119,12 +120,12 @@ def encode_multipart_data(data, files):
     return body, headers
 
 
-def send_post(url, data, files):
+def send_post(url, data):
     req = urllib2.Request(url)
     #opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     connection = httplib.HTTPConnection(req.get_host())
     connection.request('POST', req.get_selector(),
-                       *encode_multipart_data(data, files))
+                       *encode_multipart_data(data, {}))
     response = connection.getresponse()
 
     return response.read()
@@ -134,7 +135,7 @@ def send_post2(url, data, files):
     #opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     connection = httplib.HTTPConnection(req.get_host())
     connection.request('POST', req.get_selector(),
-                       *encode_multipart_data2(data, files))
+                       *encode_multipart_data(data, files))
     response = connection.getresponse()
 
     return response.read()
@@ -235,7 +236,7 @@ def uploadApkOnly():
         #         data['appcode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
 
 
-        result = send_post(uploadurl2, data, {})
+        result = send_post(uploadurl, data, {})
         r = json.loads(result)
         # register_openers()
         if r.get('status', 0) == 200:
@@ -266,48 +267,53 @@ def uploadApks():
         print 'no. %s'%i
         i+=1
         data = {'name':dirname}
-        files = {}
+        # files = {}
+        iconfiles = {}
+        imagefiles = []
         apkdir = ''
         num = 1
         for filename in apkdirlist:
             if filename[-4:] == '.apk':
                 apkdir = '%s/%s/%s'%(newapkfiles, dirname, filename)
             if filename.find('.jpg')>0:
-                files['image%s'%num] =  '%s/%s/%s'%(newapkfiles, dirname, filename)
+                imagefiles.append('%s/%s/%s'%(newapkfiles, dirname, filename))
                 num+=1
             if filename.find('.png')>0:
-                files['icon'] = '%s/%s/%s'%(newapkfiles, dirname, filename)
-            if filename.find('versioncode.txt')>=0:
-                data['versioncode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
-            if filename.find('versionnum.txt')>=0:
-                data['versionnum']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
+                iconfiles['file'] = '%s/%s/%s'%(newapkfiles, dirname, filename)
+            # if filename.find('versioncode.txt')>=0:
+            #     data['versioncode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
+            # if filename.find('versionnum.txt')>=0:
+            #     data['versionnum']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
             if filename.find('package.txt')>=0:
                 data['appcode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
             if filename.find('desc.txt')>=0:
                 data['desc']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
-                data['updateDesc']=''
+                # data['updateDesc']=''
             if filename.find('codenum.txt')>=0:
                 data['code']='a4-s'+file('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
 
-        result = send_post(uploadurl, data, files)
+        result = send_post(uploadurl, data)
         r = json.loads(result)
         if r.get('status', 0) == 200:
-            try:
-                send_post(str(r.get('upload_url')),{},{'file': apkdir})
-                successlist.append(dirname)
-                print 'success:%s'%dirname
-            except:
-                print dirname
-                errorlist.append(dirname)
+            upload_img(dirname, r.get('upload_icon_url'), iconfiles)
+            for k,u in enumerate(imagefiles):
+                upload_img(dirname, r.get('upload_image_url')[k], {'file': u})
         else:
             print '%s:%s'%(r.get('status'),dirname)
             l.append(dirname)
     print '0000000'
-    for p in  successlist:
-        print p
-    print '------'
-    for d in errorlist:
-        print d
+
+
+def upload_img(dirname,url,iconfiles):
+    try:
+        iconresult = send_post2(url, {}, iconfiles)
+        iconr = json.loads(iconresult)
+        if iconr.get('status_code', 0) == 200:
+           print 'success:%s'%dirname
+        else:
+            print dirname
+    except Exception,e:
+       print dirname
 
 if __name__=='__main__':
     #uploadApks()
