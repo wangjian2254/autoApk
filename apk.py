@@ -102,54 +102,60 @@ def newapkfile(apkname):
     return '%s/%s' % (newapkfiles, apkname)
 
 
-def autoApk():
+def autoApk(apkdir):
     global success
 
-    print '开始破解第：%s 个'%success
+
     codestr = 'a4-s'
     codenum = 1100
 
     apklist = []
-    if os.path.exists(cachefiles):
-        shutil.rmtree(cachefiles)
-    os.mkdir(cachefiles)
-    if os.path.exists(newapkfiles):
-        shutil.rmtree(newapkfiles)
-    os.mkdir(newapkfiles)
-    for apkdir in os.listdir(apkfiles):
+    if not os.path.exists(cachefiles):
+        # shutil.rmtree(cachefiles)
+        os.mkdir(cachefiles)
+    if not os.path.exists(newapkfiles):
+        # shutil.rmtree(newapkfiles)
+        os.mkdir(newapkfiles)
+    # for apkdir in os.listdir(apkfiles):
 
         #if '.DS_Store' == apkdir:
         #    continue
-        try:
-            apkdirlist = os.listdir('%s/%s' % (apkfiles, apkdir))
-        except:
-            continue
+    try:
+        apkdirlist = os.listdir('%s/%s' % (apkfiles, apkdir))
+    except:
+        return
+    # appfilename = apkdir
+    if not os.path.exists('%s/%s/%s.apk' % (newapkfiles, apkdir, apkdir)):
+        print '开始破解：%s '%apkdir
         for dirname in apkdirlist:
             if dirname[-4:] == '.apk':
                 apkdirlist.remove(dirname)
                 apkdirlist.insert(0, dirname)
         if not apkdirlist or apkdirlist[0][-4:] != '.apk':
-            continue
+            return
         appname = ''
+
         for dirname in apkdirlist:
             if dirname[-4:] != '.apk':
-                if dirname[-4:].lower() in ['.png','.jpg']:
-                    from PIL import Image
-                    img = Image.open(apkfile(apkdir, dirname))
-                    if dirname[-4:].lower() == '.png':
-                        img = img.resize((48, 48), Image.ANTIALIAS)
-                    else:
-                        width = img.size[0]
-                        height = img.size[1]
-                        nw=width/(height/400.0)
-                        img = img.resize((int(nw),400),Image.ANTIALIAS)
-                    img.save('%s/%s' % (newapkfile(appname), dirname))
-                    continue
-                shutil.copyfile(apkfile(apkdir, dirname), '%s/%s' % (newapkfile(appname), dirname))
+                try:
+                    if dirname[-4:].lower() in ['.png','.jpg']:
+                        from PIL import Image
+                        img = Image.open(apkfile(apkdir, dirname))
+                        if dirname[-4:].lower() == '.png':
+                            img = img.resize((48, 48), Image.ANTIALIAS)
+                        else:
+                            width = img.size[0]
+                            height = img.size[1]
+                            nw=width/(height/400.0)
+                            img = img.resize((int(nw),400),Image.ANTIALIAS)
+                        img.save('%s/%s' % (newapkfile(apkdir), dirname))
+                        continue
+                    shutil.copyfile(apkfile(apkdir, dirname), '%s/%s' % (newapkfile(apkdir), dirname))
+                except:
+                    pass
                 continue
-            success+=1
             apklist.append(dirname)
-            print dirname
+            # print dirname
             cmdExtract = r'java -jar lib/apktool.jar  d -f -s %s %s' % (apkfile(apkdir, dirname), cacheapkfile(dirname))
             #cmdExtract = r'java -jar lib/apktool.jar  d -f -s %s %s'% (apkfile(dirname),cacheapkfile(dirname))
             #os.system(cmdExtract)
@@ -164,12 +170,12 @@ def autoApk():
                 break
 
             #xmlstr = []
-            #for line in file('%s/AndroidManifest.xml'%newapkfile(dirname),'r'):
+            #for line in file('%s/AndroidManifest.xml'%newapkfile(appfilename),'r'):
             #    xmlstr.append(line)
             androidManifest = xml.dom.minidom.parse('%s/AndroidManifest.xml' % cacheapkfile(dirname))
             node = androidManifest.getElementsByTagName("manifest")[0]
             package = node.getAttribute("package")
-            print package
+            # print package
             node.setAttribute('android:sharedUserId', 'com.mogu3.allsharedid')
 
             application = androidManifest.getElementsByTagName('application')[0]
@@ -184,24 +190,26 @@ def autoApk():
             for s in stringxml.getElementsByTagName('string'):
                 if s.getAttribute('name') == appnameres:
                     appname = s.childNodes[0].nodeValue.replace('/','')
-                    print appname
+                    # print appname
             if appname and appname[0]=='@':
                 appnameres=appname.replace('@string/', '')
                 for s in stringxml.getElementsByTagName('string'):
                     if s.getAttribute('name') == appnameres:
                         appname = s.childNodes[0].nodeValue.replace('/','')
-                        print appname
+                        # print appname
             if not appname:
                 break
-            if os.path.exists(newapkfile(appname)):
-                shutil.rmtree(newapkfile(appname))
-            os.mkdir(newapkfile(appname))
+            if not os.path.exists(newapkfile(apkdir)):
+                # shutil.rmtree(newapkfile(apkdir))
+                os.mkdir(newapkfile(apkdir))
 
-            with open("%s/versionnum.txt" % (newapkfile(appname), ), "w") as code:
+            with open("%s/appname.txt" % (newapkfile(apkdir), ), "w") as code:
+                code.write(appname.encode('utf-8'))
+            with open("%s/versionnum.txt" % (newapkfile(apkdir), ), "w") as code:
                 code.write(node.getAttribute('android:versionCode'))
-            with open("%s/package.txt" % (newapkfile(appname), ), "w") as code:
+            with open("%s/package.txt" % (newapkfile(apkdir), ), "w") as code:
                 code.write(package)
-            with open("%s/versioncode.txt" % (newapkfile(appname), ), "w") as code:
+            with open("%s/versioncode.txt" % (newapkfile(apkdir), ), "w") as code:
                 code.write(node.getAttribute('android:versionName'))
 
 
@@ -212,22 +220,22 @@ def autoApk():
             iconsrc3 = '%s/res/drawable-xxhdpi/%s.png' % (cacheapkfile(dirname), iconres)
             from PIL import Image
             if os.path.exists(iconsrc0):
-                #shutil.copyfile(iconsrc0, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc0, '%s/%s.png' % (newapkfile(appfilename), iconres))
                 img = Image.open(iconsrc0)
             elif os.path.exists(iconsrc1):
-                #shutil.copyfile(iconsrc1, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc1, '%s/%s.png' % (newapkfile(appfilename), iconres))
                 img = Image.open(iconsrc1)
             elif os.path.exists(iconsrc2):
-                #shutil.copyfile(iconsrc2, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc2, '%s/%s.png' % (newapkfile(appfilename), iconres))
                 img = Image.open(iconsrc2)
             elif os.path.exists(iconsrc3):
-                #shutil.copyfile(iconsrc3, '%s/%s.png' % (newapkfile(appname), iconres))
+                #shutil.copyfile(iconsrc3, '%s/%s.png' % (newapkfile(appfilename), iconres))
                 img = Image.open(iconsrc3)
 
 
             img = img.resize((48, 48), Image.ANTIALIAS)
 
-            img.save('%s/%s.png' % (newapkfile(appname), iconres))
+            img.save('%s/%s.png' % (newapkfile(apkdir), iconres))
 
             usersdk = androidManifest.getElementsByTagName('uses-sdk')
             if len(usersdk):
@@ -235,7 +243,7 @@ def autoApk():
                 sdkversion = node.getAttribute('minSdkVersion')
             else:
                 sdkversion = u'所有版本'
-            print sdkversion
+            # print sdkversion
             activity = androidManifest.getElementsByTagName('action')
             mainclass = ''
             for node in activity:
@@ -251,7 +259,7 @@ def autoApk():
                         if categorynode.getAttribute('android:name') == "android.intent.category.LAUNCHER":
                             categorynode.setAttribute('android:name', 'android.intent.category.DEFAULT')
 
-            print mainclass
+            # print mainclass
             codenum += 1
             if not os.path.exists('%s/assets' % cacheapkfile(dirname)):
                 os.mkdir('%s/assets' % cacheapkfile(dirname))
@@ -259,7 +267,7 @@ def autoApk():
             pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (codestr, codenum))).encode('utf-8'))
             pluginfile.close()
 
-            codenumfile = file('%s/codenum.txt'%(newapkfile(appname),),'w')
+            codenumfile = file('%s/codenum.txt'%(newapkfile(apkdir),),'w')
             codenumfile.write('%s'%codenum)
             codenumfile.close()
 
@@ -272,7 +280,7 @@ def autoApk():
             androidManifestcopy.writexml(write, encoding='utf-8')
             write.close()
 
-            unsignApk = r'%s/%s_unsign.apk' % (cachefiles, dirname.replace('.apk', '').replace('.', '_'))
+            unsignApk = r'%s/%s_unsign.apk' % (cachefiles, apkdir)
             cmdPack = r'java -jar lib/apktool.jar b -f %s %s' % (cacheapkfile(dirname), unsignApk)
             # os.system(cmdPack)
             p = subprocess.Popen(cmdPack, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -295,16 +303,16 @@ def autoApk():
             for line in p.stdout.readlines():
                 linelist.append(line)
             if os.path.exists(signApk):
-                shutil.copyfile(signApk, signApk.replace(cachefiles, '%s/%s' % (newapkfiles, appname)))
-                print '完成破解第：%s 个'%success
+                shutil.copyfile(signApk, signApk.replace(cachefiles, '%s/%s' % (newapkfiles, apkdir)))
+                # print '完成破解：%s '%apkdir
             else:
-                shutil.rmtree(newapkfile(appname))
+                # shutil.rmtree(newapkfile(apkdir))
                 for line in linelist:
                     print line
                 break
+    uploadApks(apkdir)
 
-    if os.path.exists(cachefiles):
-        shutil.rmtree(cachefiles)
+
 
 
 class ShowStructure(HTMLParser.HTMLParser):
@@ -335,6 +343,41 @@ class ShowStructure(HTMLParser.HTMLParser):
         #        sys.stdout.write('/'+tag)
         #    sys.stdout.write(' >> %s/n' % data[:40].strip())
 
+class ApkPage1(HTMLParser.HTMLParser):
+    def setlist(self):
+        self.infodict = {'apkinfo': '', 'imglist': []}
+        self.info = False
+        self.img = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'div':
+            for att, val in attrs:
+                if att == 'class' and val == 'breif':
+                    self.info = True
+                    self.infodict['apkinfo']=''
+                if att == 'class' and val == 'overview':
+                    self.img = True
+                if att == 'class' and val == 'base-info':
+                    self.info = False
+                if att == 'data-snaps':
+                    self.infodict['imglist'].extend(val.split(','))
+        # if self.img and tag == 'img':
+        #     for att, val in attrs:
+        #         if att == 'src' and val not in self.infodict['imglist']:
+        #             self.infodict['imglist'].append(val)
+                    #self.alist.append(tag)
+
+    def handle_endtag(self, tag):
+        if self.info and tag == 'div':
+            self.info = False
+        # if self.img and tag == 'div':
+        #     self.img = False
+            #self.alist.pop()
+
+    def handle_data(self, data):
+        if self.info:
+            self.infodict['apkinfo'] += data
+            self.infodict['apkinfo'] += '\n'
 
 class ApkPage(HTMLParser.HTMLParser):
     def setlist(self):
@@ -385,29 +428,41 @@ class DownloadApkAndImage(threading.Thread):
         global num
         url=None
         while True:
+            if self.q.qsize() == 0:
+                return
+
             queueLock = threading.Lock()
             queueLock.acquire()
             if self.q.empty():
                 queueLock.release()
-                break
+                return
             else:
                 url = self.q.get()
             queueLock.release()
-            html = urllib2.urlopen('%s%s' % (urlbase, url)).read()
+            try:
+                print url
+                html = urllib2.urlopen('%s%s' % (urlbase, url), timeout=10).read()
+            except:
+                print 'error:',url
+                num+=1
+                continue
             scriptend0 = html.find('</head>')
             # scriptend = html[scriptend0:].find('</script>')
             apkstart = html[scriptend0:].find("'downurl':'") + scriptend0
             apkend = html[apkstart:].find("'mkid'") + apkstart
+            if apkstart + 10>apkend:
+                num+=1
+                continue
             apkurl = html[apkstart + 10:apkend].split("'")[1]
-            print apkurl
+
 
 
             dirname = url.split('/')[-1]
             filename = apkurl.split('/')[-1]
-            if os.path.exists('%s/%s'%(apkfiles,dirname)):
-               shutil.rmtree('%s/%s'%(apkfiles,dirname))
-            os.mkdir('%s/%s'%(apkfiles,dirname))
-            urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
+            if not os.path.exists('%s/%s'%(apkfiles,dirname)):
+                # dirname.rmtree('%s/%s'%(apkfiles,dirname))
+                os.mkdir('%s/%s'%(apkfiles,dirname))
+
 
             linelist = []
             for line in html.split('\r\n'):
@@ -415,26 +470,63 @@ class DownloadApkAndImage(threading.Thread):
             apkinfo = ApkPage()
             apkinfo.setlist()
             apkinfo.feed(''.join(linelist))
+            apkinfo1 = ApkPage1()
+            apkinfo1.setlist()
+            apkinfo1.feed(''.join(linelist))
+
+            if apkinfo.infodict['apkinfo']:
+                desc = apkinfo.infodict['apkinfo'].encode('utf-8').replace('\n', '')
+            if apkinfo1.infodict['apkinfo']:
+                desc = apkinfo1.infodict['apkinfo'].encode('utf-8').replace('\n', '')
             with open("%s/%s/desc.txt" % (apkfiles, dirname), "w") as code:
-                code.write(apkinfo.infodict['apkinfo'].encode('utf-8').replace('\n', ''))
+                code.write(desc)
 
             with open("%s/%s/address.txt" % (apkfiles, dirname), "w") as code:
                 code.write(url)
-            for i, imgurl in enumerate(apkinfo.infodict['imglist']):
-                print imgurl
-                f = urllib2.urlopen(imgurl)
-                data = f.read()
-                filename = imgurl.split('.')[-1]
-                with open("%s/%s/%s.%s" % (apkfiles, dirname, i, filename), "wb") as code:
-                    code.write(data)
+
+            imglist = []
+            if apkinfo.infodict['imglist']:
+                imglist.extend(apkinfo.infodict['imglist'])
+            if apkinfo1.infodict['imglist']:
+                imglist.extend(apkinfo1.infodict['imglist'])
+            for i, imgurl in enumerate(imglist):
+                if imgurl[-3:] == 'gif':
+                    continue
+                if os.path.exists("%s/%s/space.fig" % (apkfiles, dirname)):
+                    os.remove("%s/%s/space.fig" % (apkfiles, dirname))
+                if os.path.exists("%s/%s/%s.jpg" % (apkfiles, dirname, i)):
+                    os.remove("%s/%s/%s.jpg" % (apkfiles, dirname, i))
+                if os.path.exists("%s/%s/%s.png" % (apkfiles, dirname, i)):
+                    os.remove("%s/%s/%s.png" % (apkfiles, dirname, i))
+                filename = imgurl.split('/')[-1]
+                if not os.path.exists("%s/%s/%s" % (apkfiles, dirname, filename)):
+                    try:
+                        f = urllib2.urlopen(imgurl)
+                        data = f.read()
+                        with open("%s/%s/%s" % (apkfiles, dirname, filename), "wb") as code:
+                            code.write(data)
+                        print imgurl
+                    except:
+                        if os.path.exists("%s/%s/%s" % (apkfiles, dirname, filename)):
+                            os.remove("%s/%s/%s" % (apkfiles, dirname, filename))
+                        print 'error:',imgurl
+
+                if not os.path.exists("%s/%s/%s"%(apkfiles,dirname,filename)):
+                    print apkurl
+                    try:
+                        urllib.urlretrieve(apkurl,"%s/%s/%s"%(apkfiles,dirname,filename))
+                    except:
+                        if os.path.exists("%s/%s/%s"%(apkfiles,dirname,filename)):
+                            os.remove("%s/%s/%s"%(apkfiles,dirname,filename))
 
             num+=1
+            autoApk(dirname)
             print '完成第 %s 个'%num
-            print '还剩 %s 个'%self.q.qsize()
+            # print '还剩 %s 个'%self.q.qsize()
             print '一共 %s 个'%self.count
 
 
-def downloadApk():
+def downloadApk(num):
 
 
     urlstr = '''
@@ -534,12 +626,12 @@ def downloadApk():
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
-    for url in apkurllist[:1]:
+    for url in apkurllist:
         workQueue.put(url)
     queueLock.release()
-    threads=[]
-    for i in range(2):
-        thread=DownloadApkAndImage(workQueue,len(apkurllist))
+    threads = []
+    for i in range(num):
+        thread = DownloadApkAndImage(workQueue,len(apkurllist))
         thread.start()
         threads.append(thread)
     for t in threads:
@@ -555,16 +647,12 @@ num = 0
 success = 0
 
 
-
-print '开始下载'
-# downloadApk()
-print '下载完成，下载 ：%s'%num
-print '开始破解'
-autoApk()
-print '破解完成'
-print '下载：%s 个，成功破解：%s 个'%(num,success)
 from autoUpload import uploadApks
-uploadApks()
+print '开始'
+downloadApk(1)
+
+
+
 #
 #apkName = 'ApkTest.apk'
 #easyName = apkName.split('.apk')[0]

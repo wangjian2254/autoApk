@@ -3,6 +3,7 @@
 #Date: 14-3-9
 #Time: 下午3:20
 import json
+import shutil
 
 __author__ = u'王健'
 
@@ -11,8 +12,10 @@ newapkfiles = 'newapkfiles'
 user_agent = "image uploader"
 default_message = "Image $current of $total"
 
-uploadurl = 'http://mogu-mmggoo.appsp0t.com/PluginUploadScript'
-# uploadurl = 'http://mogu-mmggoo.appsp0t.com/PluginUploadScript'
+# urlbase = 'http://127.0.0.1:8080'
+urlbase = 'http://mogu-mmggoo.appsp0t.com'
+uploadurl = '%s/PluginUploadScript' % urlbase
+uploadurlcheck = '%s/PluginUploadNeedScript' % urlbase
 # uploadurl2 = 'http://mogu-mmggoo.appsp0t.com/PluginUploadApkScript'
 
 import logging
@@ -97,7 +100,7 @@ def encode_multipart_data(data, files):
     def encode_file(field_name):
         filename = files[field_name]
         return ('--' + boundary,
-                'Content-Disposition: form-data; name="file"; filename="%s"' % (field_name, filename.split('/')[-1]),
+                'Content-Disposition: form-data; name="%s"; filename="%s"' % (field_name, filename.split('/')[-1]),
                 'Content-Type: %s' % get_content_type(filename),
                 '', open(filename, 'rb').read())
 
@@ -110,8 +113,6 @@ def encode_multipart_data(data, files):
     body = '\r\n'.join(lines)
 
     headers = {'content-type': 'multipart/form-data; boundary=' + boundary,
-               'Host': 'mogu-mmggoo.appsp0t.com',
-               'Referer': 'http://mogu-mmggoo.appsp0t.com/',
                'DNT': '1',
                'Connection': 'keep-alive',
                'Accept-Encoding': ' deflate',
@@ -253,74 +254,110 @@ def uploadApkOnly():
             print '%s:%s' % (r.get('status'), dirname)
 
 
-def uploadApks():
+def uploadApks(dirname):
     l = []
     successlist = []
 
     errorlist = []
-    i = 1
-    for d in os.listdir(newapkfiles):
-        l.append(d)
-    for dirname in l:
+    # for d in os.listdir(newapkfiles):
+    #     l.append(d)
+    # for dirname in l:
+        # dirname = dirname.decode('gbk')
+    print '开始上传：%s '%dirname
+    try:
+        apkdirlist = os.listdir('%s/%s' % (newapkfiles, dirname))
+    except:
+        return
 
-        try:
-            apkdirlist = os.listdir('%s/%s' % (newapkfiles, dirname))
-        except:
-            continue
-        print 'no. %s' % i
-        i += 1
-        data = {'name': dirname}
-        # files = {}
-        iconfiles = {}
-        imagefiles = []
-        apkdir = ''
-        num = 1
-        for filename in apkdirlist:
-            if filename[-4:] == '.apk':
-                apkdir = '%s/%s/%s' % (newapkfiles, dirname, filename)
-            if filename.find('.jpg') > 0:
-                imagefiles.append('%s/%s/%s' % (newapkfiles, dirname, filename))
-                num += 1
-            if filename.find('.png') > 0:
-                iconfiles['file'] = '%s/%s/%s' % (newapkfiles, dirname, filename)
-            # if filename.find('versioncode.txt')>=0:
-            #     data['versioncode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
-            # if filename.find('versionnum.txt')>=0:
-            #     data['versionnum']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
-            if filename.find('package.txt') >= 0:
-                data['appcode'] = open('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
-            if filename.find('desc.txt') >= 0:
-                data['desc'] = open('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
-                # data['updateDesc']=''
-            if filename.find('codenum.txt') >= 0:
-                data['code'] = 'a4-s' + file('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
+    data = {}
+    # files = {}
+    iconfiles = None
+    imagefiles = []
+    apkdir = ''
+    num = 1
+    for filename in apkdirlist:
+        if filename[-4:] == '.apk':
+            apkdir = '%s/%s/%s' % (newapkfiles, dirname, filename)
+        if filename.find('.jpg') > 0:
+            imagefiles.append('%s/%s/%s' % (newapkfiles, dirname, filename))
+            num += 1
+        if filename.find('.png') > 0:
+            iconfiles = '%s/%s/%s' % (newapkfiles, dirname, filename)
+        # if filename.find('versioncode.txt')>=0:
+        #     data['versioncode']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
+        # if filename.find('versionnum.txt')>=0:
+        #     data['versionnum']=open('%s/%s/%s'%(newapkfiles, dirname, filename),'r').read()
+        if filename.find('package.txt') >= 0:
+            data['appcode'] = open('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
+        if filename.find('desc.txt') >= 0:
+            data['desc'] = open('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
+            # data['updateDesc']=''
+        if filename.find('codenum.txt') >= 0:
+            data['code'] = 'a4-s' + file('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
+        if filename.find('appname.txt') >= 0:
+            data['name'] = file('%s/%s/%s' % (newapkfiles, dirname, filename), 'r').read()
+
+    try:
+        data['imagenum'] = len(imagefiles)
+        resultcheck = send_post(uploadurlcheck, data)
+        rc = json.loads(resultcheck)
 
         result = send_post(uploadurl, data)
         r = json.loads(result)
-        if r.get('status', 0) == 200:
-            if r.has_key('upload_icon_url'):
-                upload_img(dirname, r.get('upload_icon_url'), iconfiles)
-            if r.has_key('upload_image_url'):
-                for k, u in enumerate(imagefiles):
-                    upload_img(dirname, r.get('upload_image_url')[k], {'file': u})
-            if r.has_key('upload_url'):
-                upload_img(dirname, r.get('upload_url'), {'file': apkdir})
-        else:
-            print '%s:%s' % (r.get('status'), dirname)
-            l.append(dirname)
-    print '0000000'
+        upload_url = None
+        if rc.has_key('upload_url'):
+            upload_url = rc.get('upload_url')
+        if r.has_key('upload_url'):
+            upload_url = r.get('upload_url')
+        if upload_url:
+            try:
+                upload_img(dirname, str(upload_url), {'file': apkdir})
+            except Exception,e:
+                print '上传失败(apk)：%s'%dirname
+                # raise e
 
+
+        upload_image_url = []
+        if rc.has_key('upload_image_url'):
+            upload_image_url = rc.get('upload_image_url')
+        if r.has_key('upload_image_url'):
+            upload_image_url = r.get('upload_image_url')
+
+        try:
+            if upload_image_url:
+                for k, u in enumerate(imagefiles):
+                    upload_img(dirname, str(upload_image_url[k]), {'file': u})
+        except Exception,e:
+                print '上传失败(image)：%s'%dirname
+                # raise e
+
+        upload_icon_url = None
+        if rc.has_key('upload_icon_url'):
+            upload_icon_url = rc.get('upload_icon_url')
+        if r.has_key('upload_icon_url'):
+            upload_icon_url = r.get('upload_icon_url')
+        if upload_icon_url:
+            try:
+                upload_img(dirname, str(upload_icon_url), {'file': iconfiles})
+            except Exception,e:
+                print '上传失败(icon)：%s'%dirname
+                # raise e
+        print '上传完成：%s'%dirname
+    except Exception,e:
+        pass
+
+        # shutil.rmtree('%s/%s' % (newapkfiles, dirname))
+#.replace("mogu-mmggoo.appspot.com","mogu-mmggoo.appsp0t.com")
 
 def upload_img(dirname, url, iconfiles):
-    try:
-        iconresult = send_post2(url, {}, iconfiles)
+    iconresult = send_post2(url.replace("mogu-mmggoo.appspot.com","mogu-mmggoo.appsp0t.com"), {}, iconfiles)
+    if iconresult:
         iconr = json.loads(iconresult)
         if iconr.get('status_code', 0) == 200:
             print 'success:%s' % dirname
-        else:
-            print dirname
-    except Exception, e:
-        print dirname
+    else:
+        print 'error:'%dirname
+
 
 
 if __name__ == '__main__':
