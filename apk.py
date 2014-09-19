@@ -302,7 +302,6 @@ def autoApk():
                 for line in linelist:
                     print line
                 break
-        break
 
     if os.path.exists(cachefiles):
         shutil.rmtree(cachefiles)
@@ -340,22 +339,25 @@ class ShowStructure(HTMLParser.HTMLParser):
 class ApkPage(HTMLParser.HTMLParser):
     def setlist(self):
         self.infodict = {'apkinfo': '', 'imglist': []}
-        self.info = False
+        self.info = 0
         self.img = False
 
     def handle_starttag(self, tag, attrs):
         if tag == 'div':
             for att, val in attrs:
-                if att == 'class' and val == 'breif':
-                    self.info = True
+                if att == 'class' and val == 'html-brief':
+                    self.info = 1
                     self.infodict['apkinfo']=''
-                if att == 'class' and val == 'overview':
                     self.img = True
+                if att == 'class' and val == 'base-info':
+                    self.img = False
         if self.img and tag == 'img':
             for att, val in attrs:
                 if att == 'src' and val not in self.infodict['imglist']:
                     self.infodict['imglist'].append(val)
                     #self.alist.append(tag)
+        if tag == 'p' and self.info == 1:
+            self.info = 2
 
     def handle_endtag(self, tag):
         if self.info and tag == 'div':
@@ -365,9 +367,10 @@ class ApkPage(HTMLParser.HTMLParser):
             #self.alist.pop()
 
     def handle_data(self, data):
-        if self.info:
+        if self.info == 2:
             self.infodict['apkinfo'] += data
-            self.infodict['apkinfo'] += '\n'
+            # self.infodict['apkinfo'] += '\n'
+            self.info = 0
             #if data.strip():
             #    for tag in self.alist:
             #        sys.stdout.write('/'+tag)
@@ -391,9 +394,10 @@ class DownloadApkAndImage(threading.Thread):
                 url = self.q.get()
             queueLock.release()
             html = urllib2.urlopen('%s%s' % (urlbase, url)).read()
-            scriptend = html.find('</script>')
-            apkstart = html[:scriptend].find("'downurl':")
-            apkend = html[apkstart:scriptend].find("'mkid'") + apkstart
+            scriptend0 = html.find('</head>')
+            # scriptend = html[scriptend0:].find('</script>')
+            apkstart = html[scriptend0:].find("'downurl':'") + scriptend0
+            apkend = html[apkstart:].find("'mkid'") + apkstart
             apkurl = html[apkstart + 10:apkend].split("'")[1]
             print apkurl
 
@@ -530,7 +534,7 @@ def downloadApk():
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
-    for url in apkurllist:
+    for url in apkurllist[:1]:
         workQueue.put(url)
     queueLock.release()
     threads=[]
