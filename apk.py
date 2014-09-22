@@ -649,7 +649,7 @@ success = 0
 
 from autoUpload import uploadApks
 print '开始'
-downloadApk(1)
+downloadApk(10)
 
 
 

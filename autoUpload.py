@@ -1,5 +1,5 @@
 # coding=utf-8
-#author:u'王健'
+# author:u'王健'
 #Date: 14-3-9
 #Time: 下午3:20
 import json
@@ -12,10 +12,14 @@ newapkfiles = 'newapkfiles'
 user_agent = "image uploader"
 default_message = "Image $current of $total"
 
-# urlbase = 'http://127.0.0.1:8080'
-urlbase = 'http://mogu-mmggoo.appsp0t.com'
+urlbase = 'http://127.0.0.1:8080/mogu'
+# urlbase = 'http://mogu-mmggoo.appsp0t.com'
 uploadurl = '%s/PluginUploadScript' % urlbase
 uploadurlcheck = '%s/PluginUploadNeedScript' % urlbase
+
+iconupload = '%s/PluginIconUpload' % urlbase
+imageupload = '%s/PluginImageUpload' % urlbase
+apkupload = '%s/PluginApkUpload' % urlbase
 # uploadurl2 = 'http://mogu-mmggoo.appsp0t.com/PluginUploadApkScript'
 
 import logging
@@ -262,8 +266,8 @@ def uploadApks(dirname):
     # for d in os.listdir(newapkfiles):
     #     l.append(d)
     # for dirname in l:
-        # dirname = dirname.decode('gbk')
-    print '开始上传：%s '%dirname
+    # dirname = dirname.decode('gbk')
+    print '开始上传：%s ' % dirname
     try:
         apkdirlist = os.listdir('%s/%s' % (newapkfiles, dirname))
     except:
@@ -301,63 +305,59 @@ def uploadApks(dirname):
         data['imagenum'] = len(imagefiles)
         resultcheck = send_post(uploadurlcheck, data)
         rc = json.loads(resultcheck)
+        rc = rc['result']
 
         result = send_post(uploadurl, data)
         r = json.loads(result)
-        upload_url = None
-        if rc.has_key('upload_url'):
-            upload_url = rc.get('upload_url')
-        if r.has_key('upload_url'):
-            upload_url = r.get('upload_url')
-        if upload_url:
+        r = r['result']
+        upload_apk_url = None
+        if rc.has_key('upload_url') or r.has_key('upload_url'):
+            upload_apk_url = '%s?pluginid=%s' % (apkupload, r.get('id'))
+
+        if upload_apk_url:
             try:
-                upload_img(dirname, str(upload_url), {'file': apkdir})
-            except Exception,e:
-                print '上传失败(apk)：%s'%dirname
+                upload_img(dirname, str(upload_apk_url), {'file': apkdir})
+            except Exception, e:
+                print '上传失败(apk)：%s' % dirname
                 # raise e
 
-
         upload_image_url = []
-        if rc.has_key('upload_image_url'):
-            upload_image_url = rc.get('upload_image_url')
-        if r.has_key('upload_image_url'):
-            upload_image_url = r.get('upload_image_url')
-
+        if rc.has_key('upload_image_url') or r.has_key('upload_image_url'):
+            upload_image_url = '%s?pluginid=%s' % (imageupload, r.get('id'))
         try:
             if upload_image_url:
                 for k, u in enumerate(imagefiles):
-                    upload_img(dirname, str(upload_image_url[k]), {'file': u})
-        except Exception,e:
-                print '上传失败(image)：%s'%dirname
-                # raise e
+                    upload_img(dirname, str(upload_image_url), {'file': u})
+        except Exception, e:
+            print '上传失败(image)：%s' % dirname
+            # raise e
 
         upload_icon_url = None
-        if rc.has_key('upload_icon_url'):
-            upload_icon_url = rc.get('upload_icon_url')
-        if r.has_key('upload_icon_url'):
-            upload_icon_url = r.get('upload_icon_url')
+        if rc.has_key('upload_icon_url') or r.has_key('upload_icon_url'):
+            upload_icon_url = '%s?pluginid=%s' % (iconupload, r.get('id'))
         if upload_icon_url:
             try:
                 upload_img(dirname, str(upload_icon_url), {'file': iconfiles})
-            except Exception,e:
-                print '上传失败(icon)：%s'%dirname
+            except Exception, e:
+                print '上传失败(icon)：%s' % dirname
                 # raise e
-        print '上传完成：%s'%dirname
-    except Exception,e:
+        print '上传完成：%s' % dirname
+    except Exception, e:
         pass
 
         # shutil.rmtree('%s/%s' % (newapkfiles, dirname))
+
+
 #.replace("mogu-mmggoo.appspot.com","mogu-mmggoo.appsp0t.com")
 
 def upload_img(dirname, url, iconfiles):
-    iconresult = send_post2(url.replace("mogu-mmggoo.appspot.com","mogu-mmggoo.appsp0t.com"), {}, iconfiles)
+    iconresult = send_post2(url, {}, iconfiles)
     if iconresult:
         iconr = json.loads(iconresult)
         if iconr.get('status_code', 0) == 200:
             print 'success:%s' % dirname
     else:
-        print 'error:'%dirname
-
+        print 'error:' % dirname
 
 
 if __name__ == '__main__':
