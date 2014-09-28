@@ -102,7 +102,7 @@ def newapkfile(apkname):
     return '%s/%s' % (newapkfiles, apkname)
 
 
-def autoApk(apkdir):
+def autoApk(apkdir, pojie=False):
     global success
 
 
@@ -237,79 +237,82 @@ def autoApk(apkdir):
 
             img.save('%s/%s.png' % (newapkfile(apkdir), iconres))
 
-            usersdk = androidManifest.getElementsByTagName('uses-sdk')
-            if len(usersdk):
-                node = usersdk[0]
-                sdkversion = node.getAttribute('minSdkVersion')
+            if pojie:
+                usersdk = androidManifest.getElementsByTagName('uses-sdk')
+                if len(usersdk):
+                    node = usersdk[0]
+                    sdkversion = node.getAttribute('minSdkVersion')
+                else:
+                    sdkversion = u'所有版本'
+                # print sdkversion
+                activity = androidManifest.getElementsByTagName('action')
+                mainclass = ''
+                for node in activity:
+                    if node.getAttribute('android:name') == 'android.intent.action.MAIN':
+                        mainclass = node.parentNode.parentNode.getAttribute('android:name')
+                        if mainclass[0] == '.':
+                            mainclass = '%s%s' % (package, mainclass)
+
+                        node.setAttribute('android:name', mainclass)
+                        categorylist = node.parentNode.getElementsByTagName('category')
+
+                        for categorynode in categorylist:
+                            if categorynode.getAttribute('android:name') == "android.intent.category.LAUNCHER":
+                                categorynode.setAttribute('android:name', 'android.intent.category.DEFAULT')
+
+                # print mainclass
+                codenum += 1
+                if not os.path.exists('%s/assets' % cacheapkfile(dirname)):
+                    os.mkdir('%s/assets' % cacheapkfile(dirname))
+                pluginfile = file('%s/assets/plugin.xml' % cacheapkfile(dirname), 'w')
+                pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (codestr, codenum))).encode('utf-8'))
+                pluginfile.close()
+
+                codenumfile = file('%s/codenum.txt'%(newapkfile(apkdir),),'w')
+                codenumfile.write('%s'%codenum)
+                codenumfile.close()
+
+                f = file('%s/AndroidManifest.xml' % cacheapkfile(dirname), 'w')
+                import codecs
+
+                androidManifestcopy = androidManifest.cloneNode(True)
+                Indent(androidManifestcopy, androidManifestcopy.documentElement)
+                write = codecs.lookup('utf-8')[3](f)
+                androidManifestcopy.writexml(write, encoding='utf-8')
+                write.close()
+
+                unsignApk = r'%s/%s_unsign.apk' % (cachefiles, apkdir)
+                cmdPack = r'java -jar lib/apktool.jar b -f %s %s' % (cacheapkfile(dirname), unsignApk)
+                # os.system(cmdPack)
+                p = subprocess.Popen(cmdPack, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                linelist = []
+                for line in p.stdout.readlines():
+                    linelist.append(line)
+                if 'Exception' in ''.join(linelist):
+                    print '失败了:%s' % apkdir
+                    for line in linelist:
+                        print line
+
+
+
+                signApk = unsignApk.replace('_unsign', '')
+                cmd_sign = r"jarsigner -verbose -keystore lib/MoGu3 -storepass %s -signedjar %s %s tianxingjian" % (
+                    password, signApk, unsignApk)
+                # os.system(cmd_sign.encode('utf-8'))
+                p = subprocess.Popen(cmd_sign.encode('utf-8'), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                linelist = []
+                for line in p.stdout.readlines():
+                    linelist.append(line)
+                if os.path.exists(signApk):
+                    shutil.copyfile(signApk, signApk.replace(cachefiles, '%s/%s' % (newapkfiles, apkdir)))
+                    # print '完成破解：%s '%apkdir
+                else:
+                    # shutil.rmtree(newapkfile(apkdir))
+                    for line in linelist:
+                        print line
+                    break
             else:
-                sdkversion = u'所有版本'
-            # print sdkversion
-            activity = androidManifest.getElementsByTagName('action')
-            mainclass = ''
-            for node in activity:
-                if node.getAttribute('android:name') == 'android.intent.action.MAIN':
-                    mainclass = node.parentNode.parentNode.getAttribute('android:name')
-                    if mainclass[0] == '.':
-                        mainclass = '%s%s' % (package, mainclass)
-
-                    node.setAttribute('android:name', mainclass)
-                    categorylist = node.parentNode.getElementsByTagName('category')
-
-                    for categorynode in categorylist:
-                        if categorynode.getAttribute('android:name') == "android.intent.category.LAUNCHER":
-                            categorynode.setAttribute('android:name', 'android.intent.category.DEFAULT')
-
-            # print mainclass
-            codenum += 1
-            if not os.path.exists('%s/assets' % cacheapkfile(dirname)):
-                os.mkdir('%s/assets' % cacheapkfile(dirname))
-            pluginfile = file('%s/assets/plugin.xml' % cacheapkfile(dirname), 'w')
-            pluginfile.write((pluginxml % (mainclass, appname, '%s%s' % (codestr, codenum))).encode('utf-8'))
-            pluginfile.close()
-
-            codenumfile = file('%s/codenum.txt'%(newapkfile(apkdir),),'w')
-            codenumfile.write('%s'%codenum)
-            codenumfile.close()
-
-            f = file('%s/AndroidManifest.xml' % cacheapkfile(dirname), 'w')
-            import codecs
-
-            androidManifestcopy = androidManifest.cloneNode(True)
-            Indent(androidManifestcopy, androidManifestcopy.documentElement)
-            write = codecs.lookup('utf-8')[3](f)
-            androidManifestcopy.writexml(write, encoding='utf-8')
-            write.close()
-
-            unsignApk = r'%s/%s_unsign.apk' % (cachefiles, apkdir)
-            cmdPack = r'java -jar lib/apktool.jar b -f %s %s' % (cacheapkfile(dirname), unsignApk)
-            # os.system(cmdPack)
-            p = subprocess.Popen(cmdPack, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            linelist = []
-            for line in p.stdout.readlines():
-                linelist.append(line)
-            if 'Exception' in ''.join(linelist):
-                print '失败了:%s' % apkdir
-                for line in linelist:
-                    print line
-
-
-
-            signApk = unsignApk.replace('_unsign', '')
-            cmd_sign = r"jarsigner -verbose -keystore lib/MoGu3 -storepass %s -signedjar %s %s tianxingjian" % (
-                password, signApk, unsignApk)
-            # os.system(cmd_sign.encode('utf-8'))
-            p = subprocess.Popen(cmd_sign.encode('utf-8'), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            linelist = []
-            for line in p.stdout.readlines():
-                linelist.append(line)
-            if os.path.exists(signApk):
-                shutil.copyfile(signApk, signApk.replace(cachefiles, '%s/%s' % (newapkfiles, apkdir)))
-                # print '完成破解：%s '%apkdir
-            else:
-                # shutil.rmtree(newapkfile(apkdir))
-                for line in linelist:
-                    print line
-                break
+                shutil.copyfile(apkfile(apkdir, dirname), '%s/%s/%s.apk' % (newapkfiles, apkdir,apkdir))
     uploadApks(apkdir)
 
 
@@ -649,7 +652,7 @@ success = 0
 
 from autoUpload import uploadApks
 print '开始'
-downloadApk(10)
+downloadApk(3)
 
 
 

@@ -12,8 +12,8 @@ newapkfiles = 'newapkfiles'
 user_agent = "image uploader"
 default_message = "Image $current of $total"
 
-urlbase = 'http://127.0.0.1:8080/mogu'
-# urlbase = 'http://mogu-mmggoo.appsp0t.com'
+# urlbase = 'http://192.168.101.18:8000/mogu'
+urlbase = 'http://openfire.mmggoomm.com/mogu'
 uploadurl = '%s/PluginUploadScript' % urlbase
 uploadurlcheck = '%s/PluginUploadNeedScript' % urlbase
 
