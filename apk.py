@@ -102,7 +102,7 @@ def newapkfile(apkname):
     return '%s/%s' % (newapkfiles, apkname)
 
 
-def autoApk(apkdir, pojie=False):
+def autoApk(apkdir, pojie = False, changepagename = False):
     global success
 
 
@@ -177,6 +177,21 @@ def autoApk(apkdir, pojie=False):
             package = node.getAttribute("package")
             # print package
             node.setAttribute('android:sharedUserId', 'com.mogu3.allsharedid')
+            if changepagename:
+                node.setAttribute('package', '%s1' % package)
+                activitys = androidManifest.getElementsByTagName('activity')
+                for activity in activitys:
+                    activityclass = activity.getAttribute('android:name')
+                    if activityclass[0] == '.':
+                        activityclass = '%s%s' % (package, activityclass)
+                        activity.setAttribute('android:name', activityclass)
+                applicationnodes = androidManifest.getElementsByTagName('application')
+                for application in applicationnodes:
+                    for n in application.childNodes:
+                        if hasattr(n, 'tagName') and n.tagName != 'activity':
+                            for key in n.attributes.keys():
+                                if n.getAttribute(key).find(package) >= 0:
+                                    n.setAttribute(key, n.getAttribute(key).replace(package, '%s1' % package))
 
             application = androidManifest.getElementsByTagName('application')[0]
             appnameres = application.getAttribute('android:label').replace('@string/', '')
@@ -313,7 +328,7 @@ def autoApk(apkdir, pojie=False):
                     break
             else:
                 shutil.copyfile(apkfile(apkdir, dirname), '%s/%s/%s.apk' % (newapkfiles, apkdir,apkdir))
-    uploadApks(apkdir)
+    # uploadApks(apkdir)
 
 
 
@@ -523,7 +538,7 @@ class DownloadApkAndImage(threading.Thread):
                             os.remove("%s/%s/%s"%(apkfiles,dirname,filename))
 
             num+=1
-            autoApk(dirname)
+            autoApk(dirname, pojie=True, changepagename=True)
             print '完成第 %s 个'%num
             # print '还剩 %s 个'%self.q.qsize()
             print '一共 %s 个'%self.count
@@ -549,6 +564,13 @@ def downloadApk(num):
     #    s = ShowStructure()
     #    s.setlist(apkurllist)
     #    s.feed(html)
+    apkurl1='''
+    /detail/index/soft_id/12251
+    /detail/index/soft_id/31585
+    /detail/index/soft_id/707073
+    /detail/index/soft_id/227778
+    /detail/index/soft_id/787218
+    '''
     apkurl = '''
     /detail/index/soft_id/227778
     /detail/index/soft_id/1198733
@@ -625,7 +647,7 @@ def downloadApk(num):
     /detail/index/soft_id/174716
     /detail/index/soft_id/8734
     '''
-    apkurllist = apkurl.split()
+    apkurllist = apkurl1.split()
     queueLock = threading.Lock()
     workQueue = Queue.Queue(len(apkurllist))
     queueLock.acquire()
